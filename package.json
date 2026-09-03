@@ -1,6 +1,7 @@
 {
   "name": "technotes",
   "version": "1.0.0",
+  "description": "A clean, private note-taking desktop application for Technical Support, Networking, and Cisco Packet Tracer with CIDR subnet calculator and CLI snippets.",
   "private": true,
   "type": "module",
   "scripts": {
