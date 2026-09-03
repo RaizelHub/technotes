@@ -1,0 +1,29 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./technotes.db"
+}
+
+model Category {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  notes     Note[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Note {
+  id         String    @id @default(uuid())
+  title      String
+  content    String    @default("")
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isPinned   Boolean   @default(false)
+  isArchived Boolean   @default(false)
+  tags       String    @default("")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
