@@ -11,7 +11,15 @@ import {
   Trash2,
   Copy,
   MoreHorizontal,
-  Hash,
+  Bookmark,
+  RotateCcw,
+  FlaskConical,
+  Wrench,
+  Zap,
+  Code,
+  Layers,
+  Bot,
+  Network,
 } from 'lucide-react';
 
 export const NoteList: React.FC = () => {
@@ -23,6 +31,7 @@ export const NoteList: React.FC = () => {
     setSearchQuery,
     sortOption,
     setSortOption,
+    selectedTrack,
     selectedFilter,
     selectedTag,
     setSelectedTag,
@@ -30,13 +39,17 @@ export const NoteList: React.FC = () => {
     createNote,
     togglePin,
     toggleArchive,
+    toggleReviewLater,
     duplicateNote,
-    deleteNote,
+    moveToTrash,
+    restoreFromTrash,
+    permanentDeleteNote,
+    emptyTrash,
   } = useNotesStore();
 
   const [activeMenuId, setActiveMenuId] = useState<string | null>(null);
 
-  // Helper to strip HTML tags for clean card snippet preview
+  // Strip HTML tags for clean card snippet preview
   const stripHtml = (html: string) => {
     const tmp = document.createElement('div');
     tmp.innerHTML = html;
@@ -44,14 +57,32 @@ export const NoteList: React.FC = () => {
   };
 
   const getFilterTitle = () => {
-    if (selectedTag) return `Tag: #${selectedTag}`;
-    if (selectedFilter === 'all') return 'All Notes';
-    if (selectedFilter === 'pinned') return 'Pinned Notes';
-    if (selectedFilter === 'archived') return 'Archived Notes';
-    if (selectedFilter === 'uncategorized') return 'Uncategorized';
-    const cat = categories.find((c) => c.id === selectedFilter);
-    return cat ? cat.name : 'Notes';
+    let title = 'Notes';
+    if (selectedTag) title = `Tag: #${selectedTag}`;
+    else if (selectedFilter === 'all') title = 'All Notes';
+    else if (selectedFilter === 'quick_captures') title = 'Quick Captures';
+    else if (selectedFilter === 'review_later') title = 'Review Later';
+    else if (selectedFilter === 'labs') title = 'Cisco Labs';
+    else if (selectedFilter === 'troubleshooting') title = 'Troubleshooting';
+    else if (selectedFilter === 'coding_concepts') title = 'Coding Concepts';
+    else if (selectedFilter === 'dev_projects') title = 'Projects';
+    else if (selectedFilter === 'workflows') title = 'Workflows';
+    else if (selectedFilter === 'pinned') title = 'Pinned Notes';
+    else if (selectedFilter === 'archived') title = 'Archived Notes';
+    else if (selectedFilter === 'trash') title = 'Trash';
+    else if (selectedFilter === 'uncategorized') title = 'Uncategorized';
+    else {
+      const cat = categories.find((c) => c.id === selectedFilter);
+      title = cat ? cat.name : 'Notes';
+    }
+
+    if (selectedTrack !== 'all' && selectedFilter === 'all') {
+      return `${selectedTrack}`;
+    }
+    return title;
   };
+
+  const isTrashView = selectedFilter === 'trash';
 
   return (
     <div className="w-80 flex-shrink-0 h-full bg-white dark:bg-zinc-950 border-r border-gray-200 dark:border-zinc-800 flex flex-col select-none no-print">
@@ -73,9 +104,25 @@ export const NoteList: React.FC = () => {
               </button>
             )}
           </div>
-          <span className="text-xs text-gray-400 dark:text-zinc-500 font-mono">
-            {notes.length} {notes.length === 1 ? 'note' : 'notes'}
-          </span>
+
+          <div className="flex items-center gap-2">
+            {isTrashView && notes.length > 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  if (window.confirm('Permanently delete all notes in Trash? This cannot be undone.')) {
+                    emptyTrash();
+                  }
+                }}
+                className="text-[11px] text-red-600 dark:text-red-400 hover:underline"
+              >
+                Empty Trash
+              </button>
+            )}
+            <span className="text-xs text-gray-400 dark:text-zinc-500 font-mono">
+              {notes.length} {notes.length === 1 ? 'note' : 'notes'}
+            </span>
+          </div>
         </div>
 
         {/* Search input */}
@@ -85,7 +132,7 @@ export const NoteList: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search notes (Ctrl+F)..."
+            placeholder="Search notes, tracks, tags, code..."
             className="w-full text-xs pl-8 pr-7 py-1.5 bg-gray-50 dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded-md focus:bg-white dark:focus:bg-zinc-950 focus:border-black dark:focus:border-zinc-500 focus:outline-none transition-colors text-gray-900 dark:text-zinc-100"
           />
           {searchQuery && (
@@ -123,8 +170,12 @@ export const NoteList: React.FC = () => {
           <div className="p-8 text-center select-none">
             {searchQuery || selectedTag ? (
               <div className="space-y-2">
-                <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">No matching notes found.</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">Try another search term or filter.</p>
+                <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">
+                  No matching notes found.
+                </p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500">
+                  Try another search term or filter.
+                </p>
                 <button
                   type="button"
                   onClick={() => {
@@ -136,10 +187,16 @@ export const NoteList: React.FC = () => {
                   Clear filters
                 </button>
               </div>
+            ) : isTrashView ? (
+              <div className="space-y-2 text-xs text-gray-400">
+                <p>Trash is empty.</p>
+              </div>
             ) : (
               <div className="space-y-3">
-                <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">No notes yet.</p>
-                <p className="text-xs text-gray-400 dark:text-zinc-500">Create your first technical note.</p>
+                <p className="text-xs font-medium text-gray-700 dark:text-zinc-300">No notes here yet.</p>
+                <p className="text-xs text-gray-400 dark:text-zinc-500">
+                  Create a new note or choose a template.
+                </p>
                 <button
                   type="button"
                   onClick={() => createNote()}
@@ -169,32 +226,82 @@ export const NoteList: React.FC = () => {
                     : 'hover:bg-gray-50 dark:hover:bg-zinc-900/60 border-l-2 border-transparent'
                 }`}
               >
-                {/* Note Title & Pin Indicator */}
+                {/* Note Title & Status Indicators */}
                 <div className="flex items-start justify-between gap-1 mb-1">
-                  <h3
-                    className={`text-xs font-medium truncate ${
-                      isSelected
-                        ? 'text-black dark:text-white font-semibold'
-                        : 'text-gray-900 dark:text-zinc-200'
-                    }`}
-                  >
-                    {note.title || 'Untitled Note'}
-                  </h3>
+                  <div className="flex items-center gap-1.5 truncate">
+                    {/* Learning Status Dot */}
+                    {note.learningStatus === 'dont_understand' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500 flex-shrink-0" title="Don't Understand" />
+                    )}
+                    {note.learningStatus === 'reviewing' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-500 flex-shrink-0" title="Reviewing" />
+                    )}
+                    {note.learningStatus === 'learned' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 flex-shrink-0" title="Learned" />
+                    )}
+
+                    <h3
+                      className={`text-xs font-medium truncate ${
+                        isSelected
+                          ? 'text-black dark:text-white font-semibold'
+                          : 'text-gray-900 dark:text-zinc-200'
+                      }`}
+                    >
+                      {note.title || 'Untitled Note'}
+                    </h3>
+                  </div>
 
                   <div className="flex items-center gap-1 flex-shrink-0">
+                    {note.isReviewLater && (
+                      <span title="Review Later">
+                        <Bookmark className="w-3 h-3 text-blue-500 fill-current" />
+                      </span>
+                    )}
                     {note.isPinned && (
                       <Pin className="w-3 h-3 text-black dark:text-white fill-current" />
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setActiveMenuId(activeMenuId === note.id ? null : note.id);
-                      }}
-                      className="hidden group-hover:block p-0.5 text-gray-400 dark:text-zinc-500 hover:text-black dark:hover:text-white rounded"
-                    >
-                      <MoreHorizontal className="w-3 h-3" />
-                    </button>
+
+                    {isTrashView ? (
+                      /* Trash Actions */
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            restoreFromTrash(note.id);
+                          }}
+                          className="p-1 text-gray-400 hover:text-black dark:hover:text-white rounded"
+                          title="Restore note"
+                        >
+                          <RotateCcw className="w-3 h-3" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (window.confirm('Delete note permanently?')) {
+                              permanentDeleteNote(note.id);
+                            }
+                          }}
+                          className="p-1 text-gray-400 hover:text-red-500 rounded"
+                          title="Delete permanently"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      /* Context Menu Trigger */
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setActiveMenuId(activeMenuId === note.id ? null : note.id);
+                        }}
+                        className="hidden group-hover:block p-0.5 text-gray-400 dark:text-zinc-500 hover:text-black dark:hover:text-white rounded"
+                      >
+                        <MoreHorizontal className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -220,33 +327,92 @@ export const NoteList: React.FC = () => {
                   </div>
                 )}
 
-                {/* Footer: Category badge & updated time */}
+                {/* Footer: Track (if viewing all), Category, Type Badge, and updated time */}
                 <div className="flex items-center justify-between text-[10px] text-gray-400 dark:text-zinc-500">
-                  <span className="truncate max-w-[120px]">
+                  <div className="flex items-center gap-1.5 truncate max-w-[190px]">
+                    {/* Career Track Pill (shown when All Tracks selected) */}
+                    {selectedTrack === 'all' && (
+                      <span className="font-mono text-[9px] px-1 py-0.2 rounded bg-gray-100 dark:bg-zinc-800 text-gray-600 dark:text-zinc-300 flex-shrink-0">
+                        {note.track === 'IT & Networking' && 'IT'}
+                        {note.track === 'Software Development' && 'DEV'}
+                        {note.track === 'AI & Automation' && 'AI'}
+                      </span>
+                    )}
+
                     {categoryName ? (
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium">
+                      <span className="truncate inline-block px-1.5 py-0.5 rounded bg-gray-200/70 dark:bg-zinc-800 text-gray-700 dark:text-zinc-300 font-medium">
                         {categoryName}
                       </span>
                     ) : (
                       <span>Uncategorized</span>
                     )}
-                  </span>
-                  <span>{formatRelativeTime(note.updatedAt)}</span>
+
+                    {/* Specialized Note Type Badges */}
+                    {note.type === 'lab' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                        <FlaskConical className="w-2.5 h-2.5" />
+                        <span>LAB</span>
+                      </span>
+                    )}
+                    {note.type === 'troubleshooting' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300">
+                        <Wrench className="w-2.5 h-2.5" />
+                        <span>TS</span>
+                      </span>
+                    )}
+                    {note.type === 'quick_capture' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300">
+                        <Zap className="w-2.5 h-2.5" />
+                        <span>QC</span>
+                      </span>
+                    )}
+                    {note.type === 'coding_concept' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300">
+                        <Code className="w-2.5 h-2.5" />
+                        <span>CODE</span>
+                      </span>
+                    )}
+                    {note.type === 'dev_project' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                        <Layers className="w-2.5 h-2.5" />
+                        <span>PROJ</span>
+                      </span>
+                    )}
+                    {note.type === 'automation_workflow' && (
+                      <span className="inline-flex items-center gap-0.5 text-[9px] font-mono px-1 py-0.2 rounded bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300">
+                        <Bot className="w-2.5 h-2.5" />
+                        <span>AUTO</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <span className="flex-shrink-0">{formatRelativeTime(note.updatedAt)}</span>
                 </div>
 
                 {/* Context Menu Dropdown */}
-                {activeMenuId === note.id && (
+                {activeMenuId === note.id && !isTrashView && (
                   <div
-                    className="absolute right-3 top-8 w-36 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded shadow-md py-1 z-30"
+                    className="absolute right-3 top-8 w-40 bg-white dark:bg-zinc-900 border border-gray-200 dark:border-zinc-800 rounded shadow-md py-1 z-30 text-gray-700 dark:text-zinc-300"
                     onClick={(e) => e.stopPropagation()}
                   >
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toggleReviewLater(note.id);
+                        setActiveMenuId(null);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2"
+                    >
+                      <Bookmark className="w-3 h-3" />
+                      <span>{note.isReviewLater ? 'Remove Review Later' : 'Review Later'}</span>
+                    </button>
                     <button
                       type="button"
                       onClick={() => {
                         togglePin(note.id);
                         setActiveMenuId(null);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-gray-700 dark:text-zinc-300"
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2"
                     >
                       <Pin className="w-3 h-3" />
                       <span>{note.isPinned ? 'Unpin Note' : 'Pin Note'}</span>
@@ -257,7 +423,7 @@ export const NoteList: React.FC = () => {
                         duplicateNote(note.id);
                         setActiveMenuId(null);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-gray-700 dark:text-zinc-300"
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2"
                     >
                       <Copy className="w-3 h-3" />
                       <span>Duplicate</span>
@@ -268,7 +434,7 @@ export const NoteList: React.FC = () => {
                         toggleArchive(note.id);
                         setActiveMenuId(null);
                       }}
-                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-gray-700 dark:text-zinc-300"
+                      className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2"
                     >
                       <Archive className="w-3 h-3" />
                       <span>{note.isArchived ? 'Unarchive' : 'Archive'}</span>
@@ -277,15 +443,13 @@ export const NoteList: React.FC = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('Delete this note permanently?')) {
-                          deleteNote(note.id);
-                        }
+                        moveToTrash(note.id);
                         setActiveMenuId(null);
                       }}
                       className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-100 dark:hover:bg-zinc-800 flex items-center gap-2 text-red-600 dark:text-red-400"
                     >
                       <Trash2 className="w-3 h-3" />
-                      <span>Delete</span>
+                      <span>Move to Trash</span>
                     </button>
                   </div>
                 )}

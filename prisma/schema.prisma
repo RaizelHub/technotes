@@ -9,21 +9,62 @@ datasource db {
 
 model Category {
   id        String   @id @default(uuid())
-  name      String   @unique
+  name      String
+  track     String   @default("IT & Networking") // 'IT & Networking' | 'Software Development' | 'AI & Automation'
   notes     Note[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([name, track])
+}
+
+model Note {
+  id             String    @id @default(uuid())
+  title          String
+  content        String    @default("")
+  type           String    @default("general") // 'general' | 'lab' | 'troubleshooting' | 'quick_capture'
+  track          String    @default("IT & Networking") // 'IT & Networking' | 'Software Development' | 'AI & Automation'
+  categoryId     String?
+  category       Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  isPinned       Boolean   @default(false)
+  isArchived     Boolean   @default(false)
+  isReviewLater  Boolean   @default(false)
+  learningStatus String    @default("none") // 'none' | 'dont_understand' | 'reviewing' | 'learned'
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  tags           String    @default("")
+  relatedNoteIds String    @default("") // Comma-separated note IDs for relationships
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+}
+
+model Question {
+  id        String   @id @default(uuid())
+  content   String
+  isLearned Boolean  @default(false)
+  noteId    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model Note {
-  id         String    @id @default(uuid())
-  title      String
-  content    String    @default("")
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
-  isPinned   Boolean   @default(false)
-  isArchived Boolean   @default(false)
-  tags       String    @default("")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+model CommandReference {
+  id        String   @id @default(uuid())
+  command   String
+  track     String   @default("IT & Networking") // 'IT & Networking' | 'Software Development' | 'AI & Automation'
+  category  String   // e.g. 'Cisco', 'Git', 'Docker', 'n8n', 'Linux', etc.
+  purpose   String
+  example   String
+  myNotes   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Attachment {
+  id           String   @id @default(uuid())
+  noteId       String?
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  createdAt    DateTime @default(now())
 }

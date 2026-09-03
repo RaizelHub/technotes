@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNotesStore } from '../../stores/useNotesStore';
-import { downloadMarkdown, printCleanDocument, downloadDatabaseBackup } from '../../utils/export';
+import { downloadMarkdown, printCleanDocument } from '../../utils/export';
 import {
   Search,
   Plus,
@@ -17,6 +17,18 @@ import {
   Printer,
   Database,
   Columns2,
+  Bookmark,
+  Shuffle,
+  HelpCircle,
+  Terminal,
+  Calendar,
+  FlaskConical,
+  Wrench,
+  Code,
+  Bot,
+  Network,
+  Compass,
+  Layers,
 } from 'lucide-react';
 
 interface CommandItem {
@@ -32,6 +44,8 @@ export const CommandPalette: React.FC = () => {
     isCommandPaletteOpen,
     setCommandPaletteOpen,
     createNote,
+    createNoteFromTemplate,
+    setSelectedTrack,
     setSelectedFilter,
     toggleSidebar,
     toggleSidecarMode,
@@ -39,9 +53,17 @@ export const CommandPalette: React.FC = () => {
     toggleDarkMode,
     isDarkMode,
     setSubnetCalculatorOpen,
-    setQuickNoteOpen,
+    setQuickCaptureOpen,
+    setCommandReferenceOpen,
+    setQuestionsOpen,
+    setTimelineOpen,
+    setBackupOpen,
+    setTrackOverviewOpen,
+    triggerRandomReview,
+    toggleReviewLater,
+    setLearningStatus,
     activeNote,
-    deleteNote,
+    moveToTrash,
     toggleArchive,
   } = useNotesStore();
 
@@ -51,18 +73,97 @@ export const CommandPalette: React.FC = () => {
 
   const commands: CommandItem[] = [
     {
+      id: 'quick_capture',
+      name: 'Quick Capture (Immediate Question / Lab note)',
+      shortcut: 'Ctrl+Shift+N',
+      icon: <Zap className="w-4 h-4 text-amber-500" />,
+      action: () => setQuickCaptureOpen(true),
+    },
+    {
+      id: 'random_review',
+      name: 'Review Something (Random Review)',
+      shortcut: 'Ctrl+Shift+R',
+      icon: <Shuffle className="w-4 h-4 text-purple-500" />,
+      action: () => triggerRandomReview(),
+    },
+    {
+      id: 'track_overview',
+      name: 'Career Tracks Overview (IT, Dev, AI)',
+      icon: <Compass className="w-4 h-4 text-blue-500" />,
+      action: () => setTrackOverviewOpen(true),
+    },
+    {
+      id: 'switch_track_all',
+      name: 'Switch Track: All Tracks',
+      icon: <FileCode className="w-4 h-4 text-gray-500" />,
+      action: () => setSelectedTrack('all'),
+    },
+    {
+      id: 'switch_track_it',
+      name: 'Switch Track: IT & Networking',
+      icon: <Network className="w-4 h-4 text-blue-600" />,
+      action: () => setSelectedTrack('IT & Networking'),
+    },
+    {
+      id: 'switch_track_dev',
+      name: 'Switch Track: Software Development',
+      icon: <Code className="w-4 h-4 text-emerald-600" />,
+      action: () => setSelectedTrack('Software Development'),
+    },
+    {
+      id: 'switch_track_ai',
+      name: 'Switch Track: AI & Automation',
+      icon: <Bot className="w-4 h-4 text-purple-600" />,
+      action: () => setSelectedTrack('AI & Automation'),
+    },
+    {
       id: 'new_note',
-      name: 'New Note',
+      name: 'New Blank Note',
       shortcut: 'Ctrl+N',
       icon: <Plus className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
       action: () => createNote(),
     },
     {
-      id: 'quick_note',
-      name: 'Open Quick Note',
-      shortcut: 'Ctrl+Shift+N',
-      icon: <Zap className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
-      action: () => setQuickNoteOpen(true),
+      id: 'new_coding_concept',
+      name: 'New Note from Template: Coding Concept',
+      icon: <Code className="w-4 h-4 text-emerald-500" />,
+      action: () => createNoteFromTemplate('coding_concept'),
+    },
+    {
+      id: 'new_dev_project',
+      name: 'New Note from Template: Development Project',
+      icon: <Layers className="w-4 h-4 text-blue-500" />,
+      action: () => createNoteFromTemplate('dev_project'),
+    },
+    {
+      id: 'new_api_integration',
+      name: 'New Note from Template: API / Integration',
+      icon: <FileCode className="w-4 h-4 text-blue-500" />,
+      action: () => createNoteFromTemplate('api_integration'),
+    },
+    {
+      id: 'new_workflow',
+      name: 'New Note from Template: Automation Workflow',
+      icon: <Bot className="w-4 h-4 text-purple-500" />,
+      action: () => createNoteFromTemplate('automation_workflow'),
+    },
+    {
+      id: 'new_ai_concept',
+      name: 'New Note from Template: AI Concept',
+      icon: <Bot className="w-4 h-4 text-purple-400" />,
+      action: () => createNoteFromTemplate('ai_concept'),
+    },
+    {
+      id: 'new_cisco_lab',
+      name: 'New Note from Template: Cisco Lab',
+      icon: <FlaskConical className="w-4 h-4 text-purple-600" />,
+      action: () => createNoteFromTemplate('cisco_lab'),
+    },
+    {
+      id: 'new_ts_journal',
+      name: 'New Note from Template: Troubleshooting Journal',
+      icon: <Wrench className="w-4 h-4 text-orange-600" />,
+      action: () => createNoteFromTemplate('troubleshooting'),
     },
     {
       id: 'subnet_calc',
@@ -72,8 +173,26 @@ export const CommandPalette: React.FC = () => {
       action: () => setSubnetCalculatorOpen(true),
     },
     {
+      id: 'command_reference',
+      name: 'Open Commands & Code Reference (Cisco, Git, Docker, n8n...)',
+      icon: <Terminal className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
+      action: () => setCommandReferenceOpen(true),
+    },
+    {
+      id: 'questions_backlog',
+      name: 'Open Questions / Learning Backlog',
+      icon: <HelpCircle className="w-4 h-4 text-blue-500" />,
+      action: () => setQuestionsOpen(true),
+    },
+    {
+      id: 'learning_timeline',
+      name: 'Open Learning Timeline / History',
+      icon: <Calendar className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
+      action: () => setTimelineOpen(true),
+    },
+    {
       id: 'toggle_sidecar',
-      name: isSidecarMode ? 'Exit Sidecar Mode' : 'Enter Sidecar / Mini Mode (Packet Tracer View)',
+      name: isSidecarMode ? 'Exit Sidecar Mode' : 'Enter Sidecar / Mini Mode',
       shortcut: 'Ctrl+M',
       icon: <Columns2 className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
       action: () => toggleSidecarMode(),
@@ -89,18 +208,6 @@ export const CommandPalette: React.FC = () => {
       action: () => toggleDarkMode(),
     },
     {
-      id: 'pinned_notes',
-      name: 'Open Pinned Notes',
-      icon: <Pin className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
-      action: () => setSelectedFilter('pinned'),
-    },
-    {
-      id: 'all_notes',
-      name: 'Open All Notes',
-      icon: <FileCode className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
-      action: () => setSelectedFilter('all'),
-    },
-    {
       id: 'toggle_sidebar',
       name: 'Toggle Sidebar',
       icon: <PanelLeft className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
@@ -108,6 +215,30 @@ export const CommandPalette: React.FC = () => {
     },
     ...(activeNote
       ? [
+          {
+            id: 'toggle_review_later_note',
+            name: activeNote.isReviewLater ? 'Remove from Review Later' : 'Mark for Review Later',
+            icon: <Bookmark className="w-4 h-4 text-blue-500" />,
+            action: () => toggleReviewLater(activeNote.id),
+          },
+          {
+            id: 'status_dont_understand',
+            name: 'Set Status: Don\'t Understand',
+            icon: <span className="w-3 h-3 rounded-full bg-amber-500" />,
+            action: () => setLearningStatus(activeNote.id, 'dont_understand'),
+          },
+          {
+            id: 'status_reviewing',
+            name: 'Set Status: Reviewing',
+            icon: <span className="w-3 h-3 rounded-full bg-blue-500" />,
+            action: () => setLearningStatus(activeNote.id, 'reviewing'),
+          },
+          {
+            id: 'status_learned',
+            name: 'Set Status: Learned',
+            icon: <span className="w-3 h-3 rounded-full bg-emerald-500" />,
+            action: () => setLearningStatus(activeNote.id, 'learned'),
+          },
           {
             id: 'export_md',
             name: `Export "${activeNote.title || 'Note'}" to Markdown (.md)`,
@@ -128,11 +259,11 @@ export const CommandPalette: React.FC = () => {
           },
           {
             id: 'delete_note',
-            name: 'Delete Current Note',
+            name: 'Move Current Note to Trash',
             icon: <Trash2 className="w-4 h-4 text-red-500" />,
             action: () => {
-              if (window.confirm('Delete this note permanently?')) {
-                deleteNote(activeNote.id);
+              if (window.confirm('Move this note to Trash?')) {
+                moveToTrash(activeNote.id);
               }
             },
           },
@@ -140,9 +271,9 @@ export const CommandPalette: React.FC = () => {
       : []),
     {
       id: 'backup_db',
-      name: 'Download SQLite Database Backup (.db)',
+      name: 'Backup, Restore & Export Data',
       icon: <Database className="w-4 h-4 text-gray-500 dark:text-zinc-400" />,
-      action: () => downloadDatabaseBackup(),
+      action: () => setBackupOpen(true),
     },
   ];
 
