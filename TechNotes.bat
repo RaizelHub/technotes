@@ -1,10 +1,10 @@
 @echo off
-title TechNotes — Private Technical Support & Cisco Learning Notes
+title TechNotes — Technical Career & Engineering Notebook
 cd /d "%~dp0"
 echo =========================================================================
-echo  TechNotes — Personal Technical Support & Cisco Learning Notes App
+echo  TechNotes — Technical Support, Full-Stack, and AI Learning Notebook
 echo =========================================================================
-echo  Launching local database server and desktop window...
+echo  Launching native desktop application...
 echo  Tip: Press Ctrl+Shift+T inside TechNotes to pin it on top of Packet Tracer!
 echo =========================================================================
 npm run desktop

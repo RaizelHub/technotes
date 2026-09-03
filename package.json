@@ -14,7 +14,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:clear": "tsx prisma/seed.ts --clear",
     "db:generate": "prisma generate",
-    "desktop": "concurrently -k -n \"SERVER,CLIENT,ELECTRON\" -c \"blue,green,magenta\" \"npm run server\" \"npm run client\" \"wait-on http://127.0.0.1:5180 && electron electron/main.cjs\""
+    "desktop": "electron electron/main.cjs",
+    "desktop:dev": "concurrently -k -n \"SERVER,CLIENT,ELECTRON\" -c \"blue,green,magenta\" \"npm run server\" \"npm run client\" \"wait-on http://127.0.0.1:5180 && electron electron/main.cjs\""
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
